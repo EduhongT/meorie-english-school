@@ -1,4 +1,4 @@
-/* 머리에 그리는 영어 스쿨 — 화면 전환·자료 읽기·음성
+/* 머리에 그리는 영어 연습실 — 화면 전환·자료 읽기·음성
    자료는 장면을 열 때 그 장면 것만 받아 온다. 한꺼번에 받지 않는다. */
 'use strict';
 
@@ -40,43 +40,64 @@ let INDEX = null, AUDIO = null;
    기계에 들어 있는 영어 목소리로 그 자리에서 읽습니다.
    그래서 파일 1,000개를 만들지도, 올리지도, 내려받게 하지도 않습니다. */
 const SPEAK = 'speechSynthesis' in window;
-/* 목소리를 둘 고른다 — 대화문에서 할머니와 상대가 달리 들려야 한다.
-   기계에 영어 목소리가 하나뿐이면 높낮이만 달리한다. */
-let voices = [], voice = null, voice2 = null;
+/* ── 목소리 고르기 ─────────────────────────────────────────
+   대화문은 역할이 61가지다. 딸·손녀·며느리는 여성이고 할아버지·아들·손자는
+   남성이다. 자리(나/상대)로만 가르면 딸이 남자 목소리로 나온다.
+   그래서 역할 이름을 보고 고른다. 성별이 없는 역할(점원·이웃·안내원…)은
+   할머니와 구별만 되면 되므로 둘째 목소리를 쓴다. */
+const 여성역 = /할머니|할머님|어머니|엄마|딸|손녀|며느리|아내|아주머니|여자|이모|고모|언니|누나|아가씨|여성/;
+const 남성역 = /할아버지|할아버님|아버지|아빠|아들|손자|사위|남편|아저씨|남자|삼촌|형님|오빠|남성/;
+/* 「Google UK English Female」은 male 을 품고 있다 — 여성을 먼저 본다 */
+const 여성목 = /female|woman|samantha|zira|aria|jenny|karen|moira|tessa|fiona|victoria|allison|ava|susan|serena|nicky|hazel|catherine|heather|sonia|libby|michelle/i;
+const 남성목 = /male|man\b|alex|daniel|david|fred|tom\b|guy|aaron|arthur|oliver|ryan|mark|george|james|rishi|gordon|reed/i;
+const 여자목소린가 = v => 여성목.test(v.name);
+const 남자목소린가 = v => !여성목.test(v.name) && 남성목.test(v.name);
+
+let voices = [], voice = null, voice2 = null, 여자들 = [], 남자들 = [];
 function pickVoice() {
   voices = speechSynthesis.getVoices() || [];
   const en = voices.filter(v => /^en/i.test(v.lang));
-  voice = en.find(v => /^en-US/i.test(v.lang) && /female|samantha|zira|aria|jenny/i.test(v.name))
-       || en.find(v => /^en-US/i.test(v.lang)) || en[0] || null;
-  voice2 = en.find(v => v !== voice && /male|david|alex|guy|daniel|fred/i.test(v.name)
-                        && !/female/i.test(v.name))
-        || en.find(v => v !== voice && /^en-US/i.test(v.lang))
-        || en.find(v => v !== voice) || voice;
+  const 미국먼저 = a => (/^en-US/i.test(a.lang) ? 0 : 1);
+  여자들 = en.filter(여자목소린가).sort((a, b) => 미국먼저(a) - 미국먼저(b));
+  남자들 = en.filter(남자목소린가).sort((a, b) => 미국먼저(a) - 미국먼저(b));
+  voice = 여자들[0] || en.find(v => /^en-US/i.test(v.lang)) || en[0] || null;   /* 할머니 */
+  voice2 = 남자들[0] || en.find(v => v !== voice) || voice;                      /* 상대 기본 */
 }
 if (SPEAK) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
-/* who 를 'other' 로 주면 둘째 목소리로 읽는다 (대화문의 상대) */
-function speak(text, btn, who) {
+/* 역할 이름으로 목소리와 높낮이를 고른다 */
+function 목소리고르기(who, role) {
+  if (who !== 'other') return { v: voice, pitch: 1 };          /* 할머니 */
+  const r = role || '';
+  if (여성역.test(r)) {
+    const 딴여자 = 여자들.find(v => v !== voice);
+    /* 여자 목소리가 하나뿐이면 할머니보다 조금 높게 읽어 가른다 */
+    return 딴여자 ? { v: 딴여자, pitch: 1 } : { v: voice, pitch: 1.18 };
+  }
+  if (남성역.test(r)) return { v: 남자들[0] || voice2, pitch: 남자들[0] ? 1 : 0.7 };
+  return { v: voice2, pitch: voice2 === voice ? 0.7 : 1 };     /* 성별이 없는 역할 */
+}
+
+function speak(text, btn, who, role) {
   if (!SPEAK) return;
   speechSynthesis.cancel();
-  if (!voice) pickVoice();
-  const 둘째 = who === 'other';
-  const v = 둘째 ? voice2 : voice;
+  if (!voice && !voices.length) pickVoice();
+  const { v, pitch } = 목소리고르기(who, role);
   const u = new SpeechSynthesisUtterance(text);
   if (v) u.voice = v;
   u.lang = (v && v.lang) || 'en-US';
   u.rate = 0.85;                       /* 시니어가 따라 말할 수 있게 조금 천천히 */
-  if (둘째 && v === voice) u.pitch = 0.7;   /* 목소리가 하나뿐일 때 — 낮게 읽는다 */
+  if (pitch !== 1) u.pitch = pitch;
   if (btn) { btn.classList.add('on');
              u.onend = u.onerror = () => btn.classList.remove('on'); }
   speechSynthesis.speak(u);
 }
-function speakBtn(text, who) {
+function speakBtn(text, who, role) {
   if (!SPEAK) return null;
   const b = el('button', 'ico hear', '🔊');
   b.setAttribute('aria-label', '들어 보기');
   b.title = '들어 보기';
-  b.onclick = e => { e.stopPropagation(); speak(text, b, who); };
+  b.onclick = e => { e.stopPropagation(); speak(text, b, who, role); };
   return b;
 }
 window.addEventListener('hashchange', () => { if (SPEAK) speechSynthesis.cancel(); });
@@ -118,8 +139,8 @@ function play(src, btn) {
              a.onended = a.onerror = () => btn.classList.remove('on'); }
   a.play().catch(() => { if (btn) btn.classList.remove('on'); });
 }
-function playBtn(key, src, text, who) {
-  if (!has(key)) return text ? speakBtn(text, who) : null;   /* mp3 가 없으면 앱이 읽는다 */
+function playBtn(key, src, text, who, role) {
+  if (!has(key)) return text ? speakBtn(text, who, role) : null;   /* mp3 가 없으면 앱이 읽는다 */
   const b = el('button', 'ico hear', '🔊');
   b.setAttribute('aria-label', '들어 보기');
   b.title = '들어 보기';
@@ -252,7 +273,7 @@ function tx(t, s) { const d = el('div', 'tx'); d.append(el('b', '', t)); if (s) 
 
 /* ── 홈·배우기: 구역 목록 ───────────────────────────────── */
 async function viewLearn() {
-  const m = screen('머리에 그리는 영어 스쿨', null);
+  const m = screen('그림으로 배우기', null);
   const ix = INDEX;
   const seen = Object.keys(mem.seen).length;
   const h = el('div', 'hero');
@@ -670,9 +691,9 @@ async function viewTalk(id) {
       const b = el('div', 'bub');
       b.append(el('div', 'en', l.en), el('div', 'ko', l.ko));
       const key = `d/${id}_${dg.part}_${String(l.n).padStart(2, '0')}`;
-      /* 할머니와 상대가 다른 목소리로 들린다 */
+      /* 역할을 보고 목소리를 고른다 — 딸은 여자, 할아버지는 남자 */
       const p = playBtn(key, `audio/dialog/${id}_${dg.part}_${String(l.n).padStart(2, '0')}.mp3`,
-                        l.en, l.who);
+                        l.en, l.who, l.role);
       if (p) b.append(p);
       row.append(b); m.append(row);
     });

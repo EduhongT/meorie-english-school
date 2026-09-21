@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>머리에 그리는 영어 스쿨</title>
+<meta name="description" content="그림으로 기억하고, 색깔로 문장을 발견하고, 미술을 영어로 이야기하는 말하기 앱">
+<meta name="theme-color" content="#1F3864">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="shell">
+<header class="topbar">
+  <button class="back" id="back" hidden aria-label="뒤로">←</button>
+  <h1 class="ttl" id="ttl">머리에 그리는 영어 스쿨</h1>
+  <button class="big" id="bigger" aria-label="글씨 크기">가<span>가</span></button>
+</header>
+
+<main id="main" tabindex="-1"></main>
+
+<nav class="tabbar" id="tabbar">
+  <button class="tab" data-tab="learn"><span class="ic">▦</span><span class="lb">그림으로<br>배우기</span></button>
+  <button class="tab" data-tab="talk"><span class="ic">❝</span><span class="lb">함께<br>말하기</span></button>
+  <button class="tab" data-tab="art"><span class="ic">◈</span><span class="lb">미술로<br>이야기하기</span></button>
+  <button class="tab" data-tab="say"><span class="ic">✎</span><span class="lb">내 말,<br>영어로</span></button>
+  <button class="tab" data-tab="me"><span class="ic">✓</span><span class="lb">나의<br>기록 보기</span></button>
+</nav>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

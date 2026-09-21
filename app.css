@@ -1,0 +1,419 @@
+/* 머리에 그리는 영어 연습실 — 시니어 화면 원칙: 큰 글씨, 큰 단추, 넉넉한 사이 */
+:root{
+  --bg:#EFE6D3; --paper:#FFF6E6; --card:#FFFFFF;
+  --navy:#1F3864; --navy-2:#2A4A7F;
+  --accent:#C8623E; --accent-d:#9E4A2C;
+  --ink:#2B2B2B; --muted:#6B6358; --line:#E0D5C0;
+  --present:#5E7038; --past:#8A6B4B; --future:#3E6FB5;
+  --gold:#D8A84E; --ok:#4A7C4E;
+  --frame:#E2D6BE;                         /* 둥근 판 바깥의 바탕 */
+  --f:1;                                   /* 글씨 크기 배율 — 단추로 바꾼다 */
+  color-scheme:light;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:'Noto Sans KR','Apple SD Gothic Neo',system-ui,sans-serif;
+  font-size:calc(17px * var(--f)); line-height:1.6;
+}
+.shell{display:flex; flex-direction:column; min-height:100dvh}
+
+h1,h2,h3,.serif{font-family:'Gowun Batang',serif;font-weight:700}
+img{max-width:100%;display:block}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+[hidden]{display:none!important}   /* display:flex 가 hidden 을 이기지 못하게 */
+
+/* ── 머리·꼬리 ───────────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; gap:10px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;
+  background:var(--navy); color:#fff;
+}
+.topbar .ttl{flex:1;margin:0;text-align:center;font-size:calc(19px * var(--f));
+  line-height:1.3;word-break:keep-all}
+.topbar .back,.topbar .big{
+  width:48px;height:48px;border-radius:14px;flex:none;
+  background:rgba(255,255,255,.16);color:#fff;font-size:calc(20px * var(--f));
+  display:flex;align-items:center;justify-content:center;
+}
+.topbar .back:active,.topbar .big:active{background:rgba(255,255,255,.3)}
+.topbar .big{font-size:calc(15px * var(--f));gap:1px;align-items:baseline}
+.topbar .big span{font-size:calc(21px * var(--f))}
+
+main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;display:flex;flex-direction:column;gap:14px}
+
+.tabbar{
+  position:sticky; bottom:0; z-index:20;
+  display:flex; background:#fff; border-top:2px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.tab{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:8px 2px 9px; font-size:calc(12.5px * var(--f)); font-weight:700; color:var(--muted);
+  line-height:1.3;
+}
+.tab .lb{display:block;text-align:center;word-break:keep-all}
+.tab .ic{font-size:calc(19px * var(--f));line-height:1}
+.tab[aria-current]{color:var(--accent)}
+
+/* ── 공통 조각 ───────────────────────────────── */
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:16px}
+.hero{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:20px;padding:20px}
+.hero h2{margin:0 0 6px;font-size:calc(24px * var(--f));line-height:1.35}
+.hero p{margin:0;opacity:.9;font-size:calc(15.5px * var(--f))}
+.muted{color:var(--muted);font-size:calc(15px * var(--f))}
+.sechead{margin:8px 2px 0;font-size:calc(19px * var(--f));color:var(--navy)}
+
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  min-height:56px;padding:14px 18px;border-radius:16px;
+  background:var(--accent);color:#fff;font-weight:700;font-size:calc(18px * var(--f));
+}
+.btn:active{background:var(--accent-d)}
+.btn.ghost{background:#fff;color:var(--navy);border:2px solid var(--line)}
+.btn.ghost:active{background:var(--paper)}
+.row{display:flex;gap:10px}
+.row>*{flex:1}
+
+/* 목록 줄 */
+.item{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  background:#fff;border:2px solid var(--line);border-radius:18px;padding:14px;
+}
+.item:active{background:var(--paper)}
+.item .num{
+  width:52px;height:52px;flex:none;border-radius:15px;background:var(--paper);
+  border:2px solid var(--line);color:var(--navy);font-weight:700;
+  display:flex;align-items:center;justify-content:center;font-size:calc(17px * var(--f));
+}
+.item img.thumb{width:92px;height:62px;flex:none;object-fit:cover;border-radius:12px;background:var(--line)}
+.item .tx{flex:1;min-width:0}
+.item .tx b{display:block;color:var(--navy);font-size:calc(17.5px * var(--f));font-weight:700}
+.item .tx small{display:block;color:var(--muted);font-size:calc(14.5px * var(--f))}
+.item .chev{color:var(--muted);font-size:calc(22px * var(--f));flex:none}
+.item .done{color:var(--ok);font-weight:700;font-size:calc(14.5px * var(--f));flex:none}
+
+/* ── 장면 그림과 자리 ────────────────────────── */
+.scenewrap{position:relative;border:2px solid var(--line);border-radius:18px;overflow:hidden;background:#fff}
+.scenewrap img{width:100%}
+.spot{
+  position:absolute; transform:translate(-50%,-50%);
+  border-radius:16px; background:transparent;
+  border:3px solid rgba(31,56,100,.45);
+  display:flex; align-items:flex-start; justify-content:flex-start;
+  padding:0;
+}
+.spot:active{border-color:var(--accent);background:rgba(200,98,62,.14)}
+.spot .n{
+  min-width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:13px;
+  background:var(--navy);color:#fff;font-weight:700;font-size:13px;line-height:26px;
+  text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.3);
+}
+.spot.seen{border-color:var(--gold)}
+.spot.seen .n{background:var(--gold);color:#3a2d10}
+
+/* ── 단어 카드 ───────────────────────────────── */
+.wordtop{display:flex;gap:16px;align-items:center}
+.wordtop .pic{
+  width:128px;height:128px;flex:none;border-radius:18px;background:var(--paper);
+  border:2px solid var(--line);display:flex;align-items:center;justify-content:center;padding:6px;
+}
+.wordtop .pic img{max-height:100%;width:auto}
+.wordtop .w{font-family:'Gowun Batang',serif;font-size:calc(34px * var(--f));font-weight:700;line-height:1.2;word-break:break-word}
+.pron{display:flex;flex-wrap:wrap;gap:7px;align-items:baseline;margin-top:3px}
+.pron .ipa{font-size:calc(13.5px * var(--f));color:var(--muted);
+  font-family:'Gowun Batang',serif;letter-spacing:.01em}
+.pron .han{font-size:calc(14px * var(--f));font-weight:700;color:var(--muted);
+  background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:1px 8px}
+/* 힘주어 읽는 자리 */
+.pron .hit{color:var(--accent);font-weight:700}
+.pron .han .hit{color:var(--accent-d)}
+.wordtop .ko{font-size:calc(21px * var(--f));font-weight:700;color:var(--accent-d);margin-top:2px}
+.tag{display:inline-block;padding:2px 10px;border-radius:9px;background:var(--navy);color:#fff;
+     font-size:calc(13.5px * var(--f));font-weight:700;vertical-align:middle;margin-left:8px}
+
+.sent{display:flex;flex-direction:column;gap:9px;background:#fff;border:2px solid var(--line);border-radius:16px;padding:14px}
+.sent .when{
+  align-self:flex-start;padding:3px 12px;border-radius:10px;color:#fff;font-weight:700;
+  font-size:calc(14px * var(--f));
+}
+.sent.alt .when{background:var(--gold);color:#3a2d10}
+.sent.t0 .when{background:var(--present)} .sent.t1 .when{background:var(--past)} .sent.t2 .when{background:var(--future)}
+.sent .en{font-size:calc(20px * var(--f));font-weight:700;line-height:1.45}
+.sent .ko{color:var(--muted);font-size:calc(16px * var(--f))}
+.sent .play{
+  align-self:flex-start;display:flex;align-items:center;gap:7px;
+  min-height:44px;padding:7px 15px;border-radius:13px;background:var(--paper);
+  border:2px solid var(--line);color:var(--navy);font-weight:700;font-size:calc(14.5px * var(--f));
+}
+.sent .play:active{background:var(--line)}
+.mic{display:flex;flex-direction:column;gap:8px;align-items:flex-start;width:100%}
+.mic .mic-go{background:var(--navy);color:#fff;border-color:var(--navy);
+  font-size:calc(14.5px * var(--f));min-height:44px;padding:7px 15px}
+.mic .mic-go:active{background:var(--navy-2)}
+.mic .mic-stop{background:#fff;font-size:calc(14px * var(--f));min-height:42px;padding:6px 14px}
+.mic-state{color:var(--muted);font-size:calc(15.5px * var(--f));line-height:1.45}
+.mic-heard{display:flex;flex-direction:column;gap:3px;width:100%;
+  background:var(--paper);border:2px solid var(--line);border-radius:14px;padding:11px 14px}
+.mic-heard.ok{background:#EAF3EA;border-color:var(--ok)}
+.mic-heard .lab{font-size:calc(13.5px * var(--f));color:var(--muted);font-weight:700}
+.mic-heard .txt{font-size:calc(18px * var(--f));font-weight:700;line-height:1.4}
+.mic-heard .ok{font-size:calc(15px * var(--f));font-weight:700;color:var(--ok)}
+.mic-count{font-size:calc(16px * var(--f));font-weight:700;color:var(--accent-d)}
+
+/* 동그란 그림 단추 — 글자 없이 그림만 */
+.ico{
+  width:48px;height:48px;flex:none;border-radius:24px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:calc(21px * var(--f));line-height:1;
+  background:var(--paper);border:2px solid var(--line);
+}
+.ico:active{background:var(--line)}
+.ico.mic-go{background:var(--navy);border-color:var(--navy)}
+.ico.mic-go:active{background:var(--navy-2)}
+.ico.on{background:var(--accent);border-color:var(--accent)}
+.btns{display:flex;gap:9px;align-items:flex-start;flex-wrap:wrap}
+/* 마이크 자리는 한 줄 안에서 필요한 만큼만 차지한다 (아이콘 둘이 나란히 놓이게) */
+.btns .mic{width:auto;min-width:0;flex:1 1 auto}
+
+/* 그림표 — 이 화면의 그림 단추가 무엇인지 한 번만 알려 준다 */
+.legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--muted);
+  font-size:calc(13.5px * var(--f));padding:0 2px}
+
+.phr{display:flex;flex-wrap:wrap;gap:8px}
+.phr span{background:var(--paper);border:2px solid var(--line);border-radius:12px;padding:5px 12px;
+          font-size:calc(15.5px * var(--f))}
+
+/* ── 대화 ────────────────────────────────────── */
+.line{display:flex;gap:11px;align-items:flex-start}
+.line.other{flex-direction:row-reverse}
+.line .who{
+  width:56px;flex:none;text-align:center;font-size:calc(13.5px * var(--f));font-weight:700;color:var(--muted);
+  padding-top:6px;
+}
+.line .bub{
+  flex:1;background:#fff;border:2px solid var(--line);border-radius:16px;padding:12px 14px;
+  display:flex;flex-direction:column;gap:6px;
+}
+.line.me .bub{background:var(--paper);border-color:var(--gold)}
+.line .bub .en{font-size:calc(18.5px * var(--f));font-weight:700;line-height:1.45}
+.line .bub .ko{color:var(--muted);font-size:calc(15.5px * var(--f))}
+.line .bub .play{align-self:flex-start;min-height:44px;padding:5px 14px;border-radius:12px;
+  background:#fff;border:2px solid var(--line);color:var(--navy);font-weight:700;font-size:calc(15px * var(--f))}
+
+/* ── 미술관 ──────────────────────────────────── */
+.artgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:11px}
+.artcell{background:#fff;border:2px solid var(--line);border-radius:16px;overflow:hidden;text-align:left;padding:0}
+.artcell:active{border-color:var(--accent)}
+.artcell .ph{aspect-ratio:4/5;background:var(--paper);display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:calc(13px * var(--f));text-align:center;border-bottom:2px solid var(--line);
+  overflow:hidden}
+.artcell .ph:has(:only-child){padding:0}
+.artcell .ph:not(:has(img)){padding:10px}
+.artcell .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.artgrid{align-items:start}
+.artcell .tx{padding:10px 11px 12px}
+.artcell .tx b{display:block;font-size:calc(15.5px * var(--f));color:var(--navy);line-height:1.35}
+.artcell .tx small{display:block;color:var(--muted);font-size:calc(13.5px * var(--f));margin-top:2px}
+.artbig{border:2px solid var(--line);border-radius:18px;overflow:hidden;background:#fff}
+.artbig img{width:100%}
+.artbig .ph{aspect-ratio:4/3;background:var(--paper);display:flex;align-items:center;justify-content:center;
+  color:var(--muted);text-align:center;padding:24px}
+.checking{color:var(--muted);font-size:calc(14.5px * var(--f));
+  background:var(--paper);border:2px dashed var(--line);border-radius:12px;padding:8px 12px;align-self:flex-start}
+.grp{margin:14px 2px 2px;font-size:calc(19px * var(--f));color:var(--navy)}
+
+/* ── 퀴즈 ────────────────────────────────────────────── */
+.qbox{display:flex;flex-direction:column;gap:14px}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{background:#fff;border:2px solid var(--line);border-radius:16px;padding:16px 12px;
+        font-size:calc(19px * var(--f));font-weight:700;color:var(--navy);min-height:64px;
+        display:flex;align-items:center;justify-content:center;word-break:break-word}
+.choice:active{background:var(--paper)}
+.choice.right{background:#EAF3EA;border-color:var(--ok);color:var(--ok)}
+.choice.wrong{background:#F7ECE8;border-color:var(--accent);color:var(--accent-d)}
+.choices.pics .choice{padding:10px;min-height:0}
+.choices.pics .choice img{width:100%;height:auto;max-height:150px;object-fit:contain}
+
+.bigpic{background:#fff;border:2px solid var(--line);border-radius:18px;padding:16px;
+        display:flex;align-items:center;justify-content:center;min-height:220px}
+.bigpic img{max-height:260px;width:auto}
+.bigword{background:#fff;border:2px solid var(--line);border-radius:18px;padding:26px 18px;
+         text-align:center;font-family:'Gowun Batang',serif;font-weight:700;
+         font-size:calc(38px * var(--f));line-height:1.25;word-break:break-word}
+.bigword.ko{color:var(--accent-d);font-size:calc(32px * var(--f))}
+.qsent{background:#fff;border:2px solid var(--line);border-radius:16px;padding:16px;
+       display:flex;flex-direction:column;gap:7px}
+.qsent .en{font-size:calc(21px * var(--f));font-weight:700;line-height:1.45}
+.qsent .ko{color:var(--muted);font-size:calc(16px * var(--f))}
+.qask{margin:0 2px;display:flex;flex-direction:column;gap:2px}
+.qask b{font-size:calc(19px * var(--f));font-weight:700;color:var(--navy);line-height:1.4}
+.qask span{font-size:calc(16px * var(--f));color:var(--muted)}
+.tell{display:flex;flex-direction:column;gap:3px;background:#F7ECE8;border:2px solid var(--accent);
+      border-radius:14px;padding:13px 15px}
+.tell.ok{background:#EAF3EA;border-color:var(--ok)}
+.tell b{font-size:calc(18px * var(--f));color:var(--accent-d)}
+.tell.ok b{color:var(--ok)}
+.tell span{font-size:calc(16.5px * var(--f))}
+
+/* ── 기록 ────────────────────────────────────── */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:#fff;border:2px solid var(--line);border-radius:18px;padding:16px;text-align:center}
+.stat b{display:block;font-family:'Gowun Batang',serif;font-size:calc(32px * var(--f));color:var(--navy);line-height:1.2}
+.stat small{display:block;color:var(--muted);font-size:calc(14.5px * var(--f));margin-top:3px}
+.bar{height:14px;border-radius:7px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+
+.notice{background:var(--paper);border:2px dashed var(--line);border-radius:16px;padding:14px;
+        color:var(--muted);font-size:calc(15px * var(--f))}
+/* ── 미술 낱말 ───────────────────────────────
+   따라 말하기와 달리 맞출 문장이 없다. 들은 말에서 미술 낱말만 짚어 준다. */
+.free{display:flex;flex-direction:column;gap:9px;align-items:flex-start}
+.free>b{font-size:calc(19px * var(--f));color:var(--navy)}
+.awrow{display:flex;flex-wrap:wrap;gap:8px}
+.awrow:empty{display:none}
+.aw{display:inline-flex;align-items:baseline;gap:6px;
+    background:#EAF3EA;border:2px solid var(--ok);border-radius:13px;padding:5px 12px}
+.aw b{font-size:calc(16.5px * var(--f))}
+.aw small{color:var(--muted);font-size:calc(13.5px * var(--f))}
+.awone{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+       flex-wrap:wrap;margin-top:10px}
+.awone .w{font-family:'Gowun Batang',serif;font-size:calc(25px * var(--f));color:var(--navy)}
+.awone .ko{font-size:calc(16.5px * var(--f));margin-top:3px}
+
+/* 「귀」 낱말은 어느 그림 앞에서 들을 수 있는지 — 눌러서 그 그림으로 간다 */
+.goart{display:flex;align-items:center;gap:8px;margin-top:8px;padding:7px 12px;
+  background:var(--paper);border:2px solid var(--line);border-radius:13px;
+  font-size:calc(14.5px * var(--f));color:var(--navy);text-align:left}
+.goart .chev{color:var(--muted)}
+
+/* 안내하는 분의 말 — 보기글과 다르게 보이게 한다. 따라 말하지 않는다 */
+.guide{background:var(--navy);color:#fff;border-radius:18px;padding:15px 16px;
+  display:flex;flex-direction:column;gap:9px;margin-top:12px}
+.guide .lab{font-size:calc(14px * var(--f));font-weight:700;opacity:.8}
+.guide .en{font-size:calc(19px * var(--f));font-weight:700;line-height:1.45}
+.guide .ko{font-size:calc(16px * var(--f));line-height:1.5;opacity:.9;margin-top:4px}
+.guide .muted{color:#fff;opacity:.75;font-size:calc(13.5px * var(--f));align-self:center}
+.guide .ico{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4)}
+
+/* 색채이론 — 짝을 마주 보게 */
+.cpair{background:var(--card);border:2px solid var(--line);border-radius:18px;
+  padding:14px;margin-top:12px}
+.cplab{font-size:calc(15px * var(--f));font-weight:700;color:var(--accent-d);margin-bottom:10px}
+.cptwo{display:grid;grid-template-columns:1fr;gap:10px}
+.cpside{background:var(--paper);border:2px solid var(--line);border-radius:14px;padding:12px;
+  display:flex;flex-direction:column}
+.cpside .btns{margin-top:auto}
+.cpside .w{font-family:'Gowun Batang',serif;font-size:calc(23px * var(--f));color:var(--navy)}
+.cpside .ko{font-size:calc(15.5px * var(--f));margin:3px 0 9px}
+.cpside .tag.old{background:var(--muted)}
+@media (min-width:420px){ .cptwo{grid-template-columns:1fr 1fr} }
+
+/* ── 내 말, 영어로 ─────────────────────────────
+   네 가지 색이 곧 문법이다. 한국어 줄과 영어 줄에 똑같이 입힌다.
+   보라 주어 · 주황 동사 · 초록 목적어 · 회색 시간 */
+.c.subj{color:#6B3FA0}
+.c.verb{color:#C2570A}
+.c.obj {color:#2E7D46}
+.c.time{color:#6B7280}
+.saykey{display:flex;flex-wrap:wrap;gap:12px;padding:0 2px;margin-top:-4px}
+.saykey .c{font-size:calc(14px * var(--f));font-weight:700}
+
+.pick{display:flex;flex-direction:column;gap:11px;margin-top:10px}
+.prow{display:flex;flex-direction:column;gap:6px}
+.prow[hidden]{display:none!important}
+.plab{font-size:calc(14px * var(--f));font-weight:700;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:var(--paper);border:2px solid var(--line);border-radius:14px;
+  padding:7px 13px;font-size:calc(16px * var(--f));min-height:42px}
+.chip[aria-current]{background:var(--navy);border-color:var(--navy);color:#fff}
+.chips.verb .chip[aria-current]{background:#C2570A;border-color:#C2570A}
+.chips.obj  .chip[aria-current]{background:#2E7D46;border-color:#2E7D46}
+.chips.subj .chip[aria-current]{background:#6B3FA0;border-color:#6B3FA0}
+.chips.time .chip[aria-current]{background:#6B7280;border-color:#6B7280}
+
+/* 들어가는 길 둘 — 마이크가 크고, 쓰기는 보조 */
+.ways{display:flex;gap:10px;margin-top:10px}
+.way{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:6px;
+  background:var(--paper);border:2px solid var(--line);border-radius:18px;padding:16px 10px}
+.way .ic{font-size:calc(30px * var(--f));line-height:1}
+.way .lb{font-size:calc(16px * var(--f));font-weight:700}
+.way.big{flex:2 1 0;background:var(--navy);border-color:var(--navy);color:#fff}
+.way.big .ic{font-size:calc(36px * var(--f))}
+.way.big .lb{font-size:calc(18.5px * var(--f))}
+.way.big:active{background:var(--navy-2)}
+
+/* 같은 뜻이 같은 칸에 — 한국어와 영어가 자리를 바꾸는 것이 보인다 */
+.fourcol{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.fc{background:var(--paper);border:2px solid var(--line);border-radius:13px;
+  padding:8px 6px;text-align:center;min-width:0}
+.fc.empty{opacity:.35}
+.fc .ko{font-size:calc(14.5px * var(--f));font-weight:700;word-break:keep-all;line-height:1.35}
+.fc .en{font-family:'Gowun Batang',serif;font-size:calc(15.5px * var(--f));font-weight:700;
+  margin-top:4px;word-break:break-word;line-height:1.3}
+.saw.big{font-size:calc(26px * var(--f))}
+.btns.three{gap:8px}
+.btns.three{flex-wrap:wrap}
+.btns.three>.play,.btns.three .mic.wide{flex:1 1 30%;min-width:0}
+.btns.three>.play,.btns.three .mic.wide .mic-go{min-height:48px;font-size:calc(15.5px * var(--f));width:100%}
+/* 셋이 나란히 설 때는 글자를 조금 줄여 줄바꿈을 막는다 */
+.btns.three>.play,.btns.three .mic.wide .mic-go{padding-left:6px;padding-right:6px;white-space:nowrap}
+.mic.wide{align-items:stretch}
+.mic.wide .mic-go{background:var(--paper);color:var(--ink);border-color:var(--line);
+  font-size:calc(14.5px * var(--f));padding:7px 8px}
+.mic.wide .mic-go[aria-pressed]{background:var(--navy);color:#fff}
+.folds{display:flex;flex-wrap:wrap;gap:8px}
+.fold{background:var(--paper);border:2px solid var(--line);border-radius:14px;
+  padding:9px 14px;font-size:calc(15px * var(--f));font-weight:700;color:var(--navy);
+  min-height:44px;margin-top:10px;text-align:left}
+.fold.small{font-size:calc(13.5px * var(--f));min-height:40px;padding:7px 12px;margin-top:0}
+.saybox{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.sayinp{flex:1 1 180px;min-height:46px;padding:9px 13px;border:2px solid var(--line);
+  border-radius:14px;font-size:calc(17px * var(--f));font-family:inherit;background:#fff}
+.sayout{margin-top:12px}
+.saycard{display:flex;flex-direction:column;gap:10px;border-color:var(--navy)}
+.saycard.dunno{border-color:var(--line);background:var(--paper)}
+.saycard .why{font-size:calc(16.5px * var(--f));font-weight:700;color:var(--accent-d)}
+.saw{line-height:1.5;word-break:keep-all}
+/* 문장 카드 안에서는 글씨 크기를 그대로 두고 색만 입힌다 */
+.sent .saw.en{font-family:'Gowun Batang',serif}
+.sent .saw .c{font-weight:700}
+.saw.ko{font-size:calc(19px * var(--f));font-weight:700}
+.saw.en{font-family:'Gowun Batang',serif;font-size:calc(24px * var(--f));font-weight:700}
+.more{display:flex;flex-direction:column;gap:9px;border-top:2px solid var(--line);padding-top:11px}
+.mline{display:flex;gap:10px;align-items:flex-start}
+.mlab{flex:none;min-width:48px;padding:3px 9px;border-radius:9px;background:var(--paper);
+  border:2px solid var(--line);font-size:calc(13.5px * var(--f));font-weight:700;color:var(--muted);
+  text-align:center}
+.mtx{flex:1 1 auto;min-width:0}
+.mtx .en{font-family:'Gowun Batang',serif;font-size:calc(19px * var(--f));font-weight:700;line-height:1.4}
+.mtx .ko{font-size:calc(15.5px * var(--f));color:var(--muted);margin-top:2px;word-break:keep-all}
+.enwrap.veil{filter:blur(7px);opacity:.5;user-select:none}
+.toggle{margin-top:8px;font-size:calc(14.5px * var(--f));min-height:42px;padding:7px 14px}
+.toggle[aria-pressed="true"]{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+@media (min-width:560px){ .item .num{width:58px;height:58px} }
+
+/* 화면이 넓으면 앱을 둥근 판 하나로 앉힌다 — 휴대전화처럼 보이게.
+   좁은 화면에서는 기계 자신의 둥근 모서리가 그 일을 하므로 그대로 둔다.
+   이때는 판 자체가 굴러가는 자리가 되어, 위·아래 띠가 판에 붙고
+   모서리 밖으로 글이 비어져 나오지 않는다. */
+@media (min-width:480px){
+  html,body{height:100%}
+  body{background:var(--frame); padding:22px 16px; overflow:hidden}
+  .shell{
+    max-width:540px; margin:0 auto; height:100%; min-height:0;   /* 바탕의 min-height:100dvh 를 지운다 */
+    overflow-y:auto; -webkit-overflow-scrolling:touch;
+    background:var(--bg); border-radius:30px;
+    box-shadow:0 14px 36px -10px rgba(31,56,100,.28), 0 0 0 1px rgba(31,56,100,.07);
+  }
+}
+
+/* 첫 화면의 한 줄 소개 — 이 앱이 무엇인지 */
+.hero .oneline{font-weight:700;line-height:1.55;margin-bottom:6px}
+
+/* 미술 낱말 — 쓰는 법 한 줄 */
+.awone .tip{font-size:calc(14px * var(--f));color:var(--muted);line-height:1.5;margin-top:4px}
+.grpnote{margin:-2px 0 10px;line-height:1.55}

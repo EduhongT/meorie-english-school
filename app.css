@@ -12,12 +12,15 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
+/* 브라우저가 글씨를 제멋대로 키우지 못하게 — 「가가」 단추로만 바꾼다 */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overflow-x:hidden}
 body{
   background:var(--bg); color:var(--ink);
   font-family:'Noto Sans KR','Apple SD Gothic Neo',system-ui,sans-serif;
   font-size:calc(17px * var(--f)); line-height:1.6;
 }
-.shell{display:flex; flex-direction:column; min-height:100dvh}
+.shell{display:flex; flex-direction:column; min-height:100vh; min-height:100dvh}
 
 h1,h2,h3,.serif{font-family:'Gowun Batang',serif;font-weight:700}
 img{max-width:100%;display:block}
@@ -400,11 +403,21 @@ main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;disp
    좁은 화면에서는 기계 자신의 둥근 모서리가 그 일을 하므로 그대로 둔다.
    이때는 판 자체가 굴러가는 자리가 되어, 위·아래 띠가 판에 붙고
    모서리 밖으로 글이 비어져 나오지 않는다. */
-@media (min-width:480px){
+/* 조금 넓은 화면(태블릿·휴대전화 가로) — 글줄만 가운데로 모은다.
+   판으로 만들지 않는다. 480px 에서 판을 만들었더니 휴대전화를 가로로 눕히거나
+   화면이 조금만 넓어도 앱이 쪼그라들어 「흩트러져」 보였다. (2026-09-22 고침) */
+@media (min-width:600px){
+  .shell{max-width:620px; margin:0 auto;
+         box-shadow:0 0 0 1px rgba(31,56,100,.08)}
+  body{background:var(--frame)}
+}
+
+/* 컴퓨터 화면 — 이때만 둥근 판 하나로 앉힌다 (휴대전화처럼 보이게) */
+@media (min-width:900px) and (min-height:600px) and (pointer:fine){
   html,body{height:100%}
   body{background:var(--frame); padding:22px 16px; overflow:hidden}
   .shell{
-    max-width:540px; margin:0 auto; height:100%; min-height:0;   /* 바탕의 min-height:100dvh 를 지운다 */
+    max-width:540px; margin:0 auto; height:100%; min-height:0;   /* 바탕의 min-height 를 지운다 */
     overflow-y:auto; -webkit-overflow-scrolling:touch;
     background:var(--bg); border-radius:30px;
     box-shadow:0 14px 36px -10px rgba(31,56,100,.28), 0 0 0 1px rgba(31,56,100,.07);
@@ -417,3 +430,91 @@ main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;disp
 /* 미술 낱말 — 쓰는 법 한 줄 */
 .awone .tip{font-size:calc(14px * var(--f));color:var(--muted);line-height:1.5;margin-top:4px}
 .grpnote{margin:-2px 0 10px;line-height:1.55}
+
+/* ── 소리가 안 나는 창에서 알려 주는 줄 (카카오톡·라인 같은 앱 안 창) ── */
+.nosound{
+  margin:0; padding:14px 16px; background:#FFF3D6; border-bottom:2px solid var(--gold);
+  color:var(--ink); line-height:1.6; font-size:calc(16px * var(--f));
+}
+.nosound b{color:var(--accent-d)}
+.nosound .go{
+  display:inline-block; margin-top:8px; padding:10px 14px; min-height:44px;
+  border-radius:12px; background:var(--navy); color:#fff; font-weight:700;
+}
+
+/* ── 대화문 한 편 이어 듣기 ─────────────────────────────── */
+.btn.이어{margin:2px 0 12px}
+.btn.이어.on{background:var(--accent);border-color:var(--accent);color:#fff}
+/* 지금 읽고 있는 줄 — 색만으로 알리지 않고 테두리도 함께 짚는다 */
+.line.now .bub{box-shadow:0 0 0 4px var(--accent); background:#FFF9EA}
+.line.now .who{color:var(--accent-d)}
+
+/* 낱말 그 자체를 듣고 따라 말하는 줄 */
+.wordtop .wordsay{margin-top:10px}
+.wordtop .wordsay .mic{flex:0 1 auto}
+
+/* 대화문에도 네 색 — 말풍선 안에서도 같은 자리는 같은 색이다 (2026-09-22) */
+.line .bub .en .c{font-weight:700}
+.line .bub .ko .c{font-weight:700}
+
+/* ── 보너스: 중·고등 낱말 1,800 (2026-09-22) ───────────────
+   손주가 배우는 낱말을 50개씩 이어 읽는 자리. 줄이 많아 한 줄을 낮게 잡는다. */
+.hsone{margin:6px 0;padding:12px 14px}
+.hsone .w{font-size:calc(23px * var(--f))}
+.hsone .ko{margin-top:2px}
+.hsone .hsn{display:inline-block;min-width:48px;font-family:'Noto Sans KR',sans-serif;
+            font-size:calc(14px * var(--f));font-weight:700;color:var(--muted)}
+.hsone .tag.go{margin-left:8px;background:var(--accent-d);cursor:pointer;border:0;
+               font-size:calc(13px * var(--f));padding:3px 10px}
+.hsone.now{box-shadow:0 0 0 4px var(--accent);background:#FFF9EA}
+.hsopt{display:flex;align-items:center;gap:10px;margin:4px 2px 10px;
+       font-size:calc(16px * var(--f));color:var(--navy)}
+.hsopt input{width:24px;height:24px;accent-color:var(--accent-d)}
+.hero .muted{color:#D9E0EC}
+
+/* ── 이 그림 이야기 · 세 칸 나눔 (2026-09-23) ─────────────
+   작품 바라보기 / 내 느낌 말하기 / 이 그림 이야기 — 큰 머리글로 갈라 준다. */
+.corner{margin:22px 2px 10px;padding-bottom:6px;border-bottom:3px solid var(--navy);
+        font-family:'Gowun Batang',serif;font-size:calc(24px * var(--f));color:var(--navy)}
+.corner:first-child{margin-top:4px}
+.card.step{margin:10px 0;padding:16px}
+.stepno{font-family:'Gowun Batang',serif;font-weight:700;color:var(--accent-d);
+        font-size:calc(20px * var(--f));margin-bottom:8px}
+.step .stko p{font-size:calc(17.5px * var(--f));line-height:1.75;margin:0 0 8px}
+.step .stko p:last-child{margin-bottom:0}
+.step .sten{margin-top:10px;padding:12px 14px;border-radius:12px;background:#F4F1E8;
+            border:1px solid var(--line)}
+.step .sten p{font-size:calc(17px * var(--f));line-height:1.7;margin:0 0 8px;color:#243B5E}
+.step .sten p:last-child{margin-bottom:0}
+.btn.ghost.small{width:auto;padding:8px 14px;font-size:calc(15px * var(--f));margin:0}
+.askone{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.askone .ko{font-size:calc(18px * var(--f));font-weight:700;color:var(--navy);line-height:1.6}
+.askone .en{font-size:calc(16.5px * var(--f));color:var(--muted);margin-top:3px}
+.sayone{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.sayone .lv{display:inline-block;padding:3px 10px;border-radius:9px;background:var(--accent-d);
+            color:#fff;font-size:calc(13.5px * var(--f));font-weight:700}
+.sayone .en{font-family:'Gowun Batang',serif;font-size:calc(21px * var(--f));
+            color:var(--navy);margin-top:6px;line-height:1.45}
+.sayone .ko{font-size:calc(16.5px * var(--f));color:var(--muted);margin-top:2px}
+
+/* ── 미술을 영어로 설명하기 (2026-09-23) ────────────────────
+   아는 미술을 쉬운 영어로 꺼내는 자리. 네 걸음은 이 그림 이야기와 같은 카드를 쓴다. */
+.aeen{min-width:58px;padding:6px 8px;border-radius:12px;background:var(--navy);color:#fff;
+      font-family:'Gowun Batang',serif;font-size:calc(13px * var(--f));font-weight:700;
+      text-align:center;line-height:1.25;word-break:break-word;align-self:center}
+.aetop{margin:4px 2px 10px}
+.aetop .w{font-family:'Gowun Batang',serif;font-size:calc(30px * var(--f));color:var(--navy);font-weight:700}
+.aetop .ko{font-size:calc(20px * var(--f));font-weight:700;color:var(--accent-d);margin-top:2px}
+.step p{font-size:calc(17.5px * var(--f));line-height:1.75;margin:0 0 8px}
+.step p:last-child{margin-bottom:0}
+.aenote{margin-top:10px;padding:10px 12px;border-radius:12px;background:#F4F1E8;
+        border:1px solid var(--line);font-size:calc(15.5px * var(--f));color:var(--muted);line-height:1.6}
+.aesee{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-top:10px;
+       padding:12px 14px;border:2px solid var(--line);border-radius:14px;background:#fff;cursor:pointer}
+.aesee .tx{flex:1}
+.aesee b{display:block;font-family:'Gowun Batang',serif;font-size:calc(18px * var(--f));color:var(--navy)}
+.aesee small{display:block;font-size:calc(15px * var(--f));color:var(--muted);line-height:1.6;margin-top:3px}
+.aehint{margin-top:8px;padding:12px 14px;border-radius:12px;background:#F4F1E8;border:1px solid var(--line)}
+.aehint .lab{font-size:calc(13.5px * var(--f));font-weight:700;color:var(--accent-d);margin-bottom:6px}
+.hintone{display:flex;align-items:center;gap:8px;margin-top:6px}
+.hintone .en{flex:1;font-family:'Gowun Batang',serif;font-size:calc(17px * var(--f));color:var(--navy)}

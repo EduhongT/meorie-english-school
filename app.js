@@ -78,8 +78,51 @@ function 목소리고르기(who, role) {
   return { v: voice2, pitch: voice2 === voice ? 0.7 : 1 };     /* 성별이 없는 역할 */
 }
 
+/* ── 한국말 목소리 ────────────────────────────────────────
+   「중·고등 낱말」에서 뜻도 함께 들을 때만 쓴다. 기계에 한국말 목소리가
+   없으면 조용히 건너뛴다 — 영어는 그대로 들린다. */
+function 한국목소리() {
+  if (!voices.length) pickVoice();
+  return voices.find(v => /^ko/i.test(v.lang)) || null;
+}
+function 한국말읽기(text, 끝나면) {
+  const v = SPEAK ? 한국목소리() : null;
+  if (!v) return 끝나면();
+  const u = new SpeechSynthesisUtterance(text);
+  u.voice = v; u.lang = v.lang; u.rate = 0.95;
+  let 끝냄 = false;
+  const 한번만 = () => { if (!끝냄) { 끝냄 = true; 끝나면(); } };
+  u.onend = u.onerror = 한번만;
+  speechSynthesis.speak(u);
+  setTimeout(한번만, Math.max(2600, text.length * 280));      /* 입을 못 떼면 넘어간다 */
+}
+
+/* ── 소리가 안 나는 창 알아채기 ─────────────────────────────
+   카카오톡·라인·페이스북 안에서 링크를 누르면 그 앱의 작은 창이 열린다.
+   그 창에는 영어 목소리가 없는 일이 많아, 🔊 를 눌러도 아무 일도 안 일어난다.
+   그래서 읽기 시작했는지 지켜보다가, 시작을 못 하면 한 번만 알려 준다.
+   (미리 알리지 않는다 — 소리가 나는 창에서도 알리면 잔소리가 된다) */
+const 앱안창 = /KAKAOTALK|NAVER|Line\/|FBAN|FBAV|Instagram|DaumApps|everytimeApp|KAKAOSTORY/i
+              .test(navigator.userAgent);
+let 소리알림함 = false;
+function 소리못냄알림() {
+  if (소리알림함) return;
+  소리알림함 = true;
+  const d = el('div', 'nosound');
+  d.innerHTML = '<b>이 창에서는 소리가 나지 않습니다.</b><br>' +
+    (앱안창 ? '오른쪽 아래 <b>⋮</b> (또는 나침반 모양)을 누르고 ' +
+              '<b>「다른 브라우저로 열기」</b>를 골라 주세요. 그러면 소리가 납니다.'
+            : '이 기계에 영어 목소리가 없는 것 같습니다. ' +
+              '다른 브라우저로 열어 보시거나, 글자를 보고 따라 말하셔도 됩니다.');
+  const b = el('button', 'go', '알겠습니다');
+  b.onclick = () => d.remove();
+  d.append(document.createElement('br'), b);
+  const shell = document.querySelector('.shell');
+  shell.insertBefore(d, shell.children[1]);
+}
+
 function speak(text, btn, who, role) {
-  if (!SPEAK) return;
+  if (!SPEAK) return 소리못냄알림();
   speechSynthesis.cancel();
   if (!voice && !voices.length) pickVoice();
   const { v, pitch } = 목소리고르기(who, role);
@@ -88,9 +131,17 @@ function speak(text, btn, who, role) {
   u.lang = (v && v.lang) || 'en-US';
   u.rate = 0.85;                       /* 시니어가 따라 말할 수 있게 조금 천천히 */
   if (pitch !== 1) u.pitch = pitch;
+  let 시작함 = false;
+  u.onstart = () => { 시작함 = true; };
   if (btn) { btn.classList.add('on');
              u.onend = u.onerror = () => btn.classList.remove('on'); }
   speechSynthesis.speak(u);
+  setTimeout(() => {                   /* 1.8초가 지나도 입을 못 뗐으면 못 내는 것이다 */
+    if (!시작함 && !speechSynthesis.speaking && !speechSynthesis.pending) {
+      if (btn) btn.classList.remove('on');
+      소리못냄알림();
+    }
+  }, 1800);
 }
 function speakBtn(text, who, role) {
   if (!SPEAK) return null;
@@ -100,7 +151,13 @@ function speakBtn(text, who, role) {
   b.onclick = e => { e.stopPropagation(); speak(text, b, who, role); };
   return b;
 }
-window.addEventListener('hashchange', () => { if (SPEAK) speechSynthesis.cancel(); });
+/* 이어 듣기를 멈추는 손잡이들 — 화면을 떠나면 다 멈춘다 */
+let 잇기멈춤 = [];
+window.addEventListener('hashchange', () => {
+  if (SPEAK) speechSynthesis.cancel();
+  if (player) { player.pause(); player = null; }
+  잇기멈춤.forEach(f => f()); 잇기멈춤 = [];
+});
 
 /* ── 발음 줄 ────────────────────────────────────────────────
    발음기호와 한글 발음을 나란히 내고, 힘주어 읽는 자리를 색으로 짚는다.
@@ -139,6 +196,33 @@ function play(src, btn) {
              a.onended = a.onerror = () => btn.classList.remove('on'); }
   a.play().catch(() => { if (btn) btn.classList.remove('on'); });
 }
+/* 한 줄을 읽고, 다 읽으면 끝났다고 알려 준다. mp3 가 있으면 mp3 로 읽는다.
+   이어 듣기가 이것을 줄줄이 부른다. */
+function 한줄읽기(key, src, text, who, role, 끝나면) {
+  if (has(key)) {
+    if (player) { player.pause(); player = null; }
+    const a = new Audio(src); player = a;
+    a.onended = a.onerror = () => 끝나면();
+    a.play().catch(() => 끝나면());
+    return;
+  }
+  if (!SPEAK) return 끝나면();
+  speechSynthesis.cancel();
+  if (!voice && !voices.length) pickVoice();
+  const { v, pitch } = 목소리고르기(who, role);
+  const u = new SpeechSynthesisUtterance(text);
+  if (v) u.voice = v;
+  u.lang = (v && v.lang) || 'en-US';
+  u.rate = 0.85;
+  if (pitch !== 1) u.pitch = pitch;
+  let 시작함 = false, 끝냄 = false;
+  const 한번만 = () => { if (!끝냄) { 끝냄 = true; 끝나면(); } };
+  u.onstart = () => { 시작함 = true; };
+  u.onend = u.onerror = 한번만;
+  speechSynthesis.speak(u);
+  setTimeout(() => { if (!시작함 && !speechSynthesis.speaking) { 소리못냄알림(); 한번만(); } }, 1800);
+}
+
 function playBtn(key, src, text, who, role) {
   if (!has(key)) return text ? speakBtn(text, who, role) : null;   /* mp3 가 없으면 앱이 읽는다 */
   const b = el('button', 'ico hear', '🔊');
@@ -292,6 +376,14 @@ async function viewLearn() {
     b.append(done ? el('div', 'done', `${done}/${z.scenes.length}`) : el('div', 'chev', '›'));
     m.append(b);
   });
+  /* 함께 읽기 — 손주와 읽는 1,800단어 (2026-09-22, 이름은 기획자 확정) */
+  m.append(el('h3', 'grp', '함께 읽기'));
+  m.append(el('p', 'muted grpnote', '중·고등학교 영어단어를 듣고 소리 내어 읽어 보세요.'));
+  const hb = item(() => { location.hash = '#/hs'; });
+  hb.append(el('div', 'num', '★'),
+            tx('손주와 읽는 1,800단어', '50개씩 이어 읽기 · 뜻도 함께 들을 수 있어요'),
+            el('div', 'chev', '›'));
+  m.append(hb);
 }
 
 /* ── 구역 → 장면 목록 ───────────────────────────────────── */
@@ -469,6 +561,11 @@ async function viewWord(id, slot) {
   const pr = pronLine(w);
   if (pr) info.append(pr);
   info.append(el('div', 'ko', w.ko));
+  /* 낱말 그 자체도 들어 보고 따라 말한다 — 미술 낱말 화면과 같은 모양 (2026-09-22) */
+  const 낱말줄 = el('div', 'btns wordsay');
+  const hb = speakBtn(w.w); if (hb) 낱말줄.append(hb);
+  const mb = speakPractice(w.w); if (mb) 낱말줄.append(mb);
+  if (낱말줄.children.length) info.append(낱말줄);
   top.append(pic, info); m.append(top);
 
   w.s.forEach((s, i) => {
@@ -685,17 +782,51 @@ async function viewTalk(id) {
   addLegend(m, SPEAK, false);
   d.dialogs.forEach(dg => {
     m.append(el('h3', 'sechead', `${dg.part}편 — ${dg.about || ''}`));
+    const 줄들 = [];
+    /* 한 편을 처음부터 끝까지 이어 듣기 — 라디오처럼 흘러가게 한다.
+       읽는 줄을 짚어 주고, 화면이 따라 내려간다. 언제든 멈출 수 있다. */
+    const 이어 = el('button', 'btn ghost 이어');
+    const 멈춤글 = '■ 그만 듣기', 시작글 = `▶ ${dg.part}편 이어 듣기`;
+    이어.textContent = 시작글;
+    let 도는중 = false;
+    const 멈추기 = () => {
+      도는중 = false; 이어.textContent = 시작글; 이어.classList.remove('on');
+      if (SPEAK) speechSynthesis.cancel();
+      if (player) { player.pause(); player = null; }
+      줄들.forEach(x => x.row.classList.remove('now'));
+    };
+    잇기멈춤.push(멈추기);
+    const 한줄씩 = i => {
+      if (!도는중) return;
+      if (i >= 줄들.length) return 멈추기();
+      줄들.forEach(x => x.row.classList.remove('now'));
+      const x = 줄들[i];
+      x.row.classList.add('now');
+      x.row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      한줄읽기(x.key, x.src, x.en, x.who, x.role,
+               () => setTimeout(() => 한줄씩(i + 1), 450));   /* 숨 돌릴 짬 */
+    };
+    이어.onclick = () => {
+      if (도는중) return 멈추기();
+      잇기멈춤.forEach(f => f());                              /* 다른 편이 돌고 있으면 멈춘다 */
+      도는중 = true; 이어.textContent = 멈춤글; 이어.classList.add('on');
+      한줄씩(0);
+    };
+    m.append(이어);
+
     dg.lines.forEach(l => {
       const row = el('div', `line ${l.who}`);
       row.append(el('div', 'who', l.role));
       const b = el('div', 'bub');
-      b.append(el('div', 'en', l.en), el('div', 'ko', l.ko));
+      /* 색 나눔이 있는 줄만 네 색으로 낸다. 없으면 검은 글씨 그대로다. (2026-09-22) */
+      b.append(segColored(l.en, l.sg, 'en'), segColored(l.ko, l.kg, 'ko'));
       const key = `d/${id}_${dg.part}_${String(l.n).padStart(2, '0')}`;
+      const src = `audio/dialog/${id}_${dg.part}_${String(l.n).padStart(2, '0')}.mp3`;
       /* 역할을 보고 목소리를 고른다 — 딸은 여자, 할아버지는 남자 */
-      const p = playBtn(key, `audio/dialog/${id}_${dg.part}_${String(l.n).padStart(2, '0')}.mp3`,
-                        l.en, l.who, l.role);
+      const p = playBtn(key, src, l.en, l.who, l.role);
       if (p) b.append(p);
       row.append(b); m.append(row);
+      줄들.push({ row, key, src, en: l.en, who: l.who, role: l.role });
     });
   });
   const b = el('button', 'btn ghost', '이 장면 그림 보기');
@@ -712,13 +843,14 @@ function segColored(text, code, cls) {
   if (!code) { d.textContent = text; return d; }
   const body = text.replace(/[.!?]+$/, ''), end = text.slice(body.length);
   const toks = body.split(' ');
-  const KN = { s: 'subj', v: 'verb', o: 'obj', t: 'time' };
-  const marks = [...code.matchAll(/([svot])(\d+)/g)].map(m => [KN[m[1]], +m[2]]);
+  /* n = 색을 넣지 않는 자리. 인사말 한 마디 때문에 줄 전체를 검게 두지 않는다. */
+  const KN = { s: 'subj', v: 'verb', o: 'obj', t: 'time', n: '' };
+  const marks = [...code.matchAll(/([svotn])(\d+)/g)].map(m => [KN[m[1]], +m[2]]);
   if (!marks.length) { d.textContent = text; return d; }
   marks.forEach((m, i) => {
     const to = i + 1 < marks.length ? marks[i + 1][1] : toks.length;
     if (to <= m[1]) return;
-    d.append(el('span', 'c ' + m[0], toks.slice(m[1], to).join(' ')));
+    d.append(el('span', m[0] ? 'c ' + m[0] : '', toks.slice(m[1], to).join(' ')));
     if (to < toks.length) d.append(document.createTextNode(' '));
   });
   if (end) d.append(document.createTextNode(end));
@@ -1850,16 +1982,30 @@ async function viewArtWords() {
 
 /* ── 미술관 ─────────────────────────────────────────────── */
 let ART = null;
+let STORY = null;
+const 그림이야기 = async () => (STORY = STORY || await get('data/artstory.json'));
 async function viewArt() {
   ART = ART || await get('data/art.json');
   const m = screen('미술로 이야기하기', null);
   m.append(Object.assign(el('p', 'muted'),
     { textContent: SPEAK ? '그림을 고르고, 보이는 것부터 한 문장씩 말해 보세요. 정답은 없습니다.'
                          : '그림을 고르고, 보이는 것부터 한 문장씩 말해 보세요. (이 기계에는 영어 목소리가 없어 듣기 단추가 나오지 않습니다.)' }));
+  /* 이 코너의 세 자리 (2026-09-23 기획자 확정)
+       작품 감상하기 — 그림을 고르면 열린다 (보이는 것·색·느낌·나의 이야기)
+       이 그림 이야기 — 그 작품 화면 아래쪽
+       미술을 영어로 설명하기 — 사조·기법·재료·구성 */
+  const ae = item(() => { location.hash = '#/ae'; });
+  ae.append(el('div', 'num', '설명'),
+            tx('미술을 영어로 설명하기', '미술 사조와 표현 기법을 쉬운 영어로'),
+            el('div', 'chev', '›'));
+  m.append(ae);
+  await artWords();
   const aw = item(() => { location.hash = '#/aw'; });
-  aw.append(el('div', 'num', '낱말'), tx('미술 낱말 37개', '그림 이야기에 자주 나오는 말'),
+  aw.append(el('div', 'num', '낱말'), tx(`미술 낱말 ${AW.words.length}개`, '그림 이야기에 자주 나오는 말'),
             el('div', 'chev', '›'));
   m.append(aw);
+  m.append(el('h3', 'grp', '작품 감상하기'));
+  m.append(el('p', 'muted grpnote', '그림을 고르면 보이는 것부터 한 문장씩 말해 봅니다. 그 아래에 이 그림 이야기가 있습니다.'));
   const g = el('div', 'artgrid');
   ART.works.forEach(w => {
     const b = el('button', 'artcell'); b.onclick = () => { location.hash = `#/a/${w.id}`; };
@@ -1877,24 +2023,29 @@ async function viewArtOne(id) {
   const w = ART.works.find(x => x.id === id);
   if (!w) return location.replace('#/art');
   const m = screen('미술로 이야기하기', '#/art');
-  addLegend(m, SPEAK, true);
-  const key = el('div', 'saykey');
-  [['subj', '주어'], ['verb', '동사'], ['obj', '목적어'], ['time', '시간']]
-    .forEach(([k, n]) => key.append(el('span', 'c ' + k, n)));
-  m.append(key);
+  await artWords();
+  const 이야기 = (await 그림이야기())[w.id];
+
+  /* 한 작품을 세 칸으로 나눈다 (2026-09-23 기획자 확정)
+       작품 감상하기 → 이 그림 이야기 (그리고 코너에는 미술을 영어로 설명하기)
+     보고, 말해 보고, 그러고 나서 사연을 듣는 차례다. 사연을 먼저 읽으면
+     「내 느낌」이 사연에 끌려간다. */
+
+  /* ── 1. 작품 감상하기 ───────────────────────────────── */
+  m.append(el('h2', 'corner', '작품 감상하기'));
   const box = el('div', 'artbig');
   const i = el('img'); i.src = `img/art/${w.img}`; i.alt = w.ko;
   i.onerror = () => { i.remove(); const p = el('div', 'ph'); p.textContent = `${w.ko}\n(그림 파일이 아직 없습니다)`;
                       p.style.whiteSpace = 'pre-line'; box.prepend(p); };
   box.append(i); m.append(box);
   const c = el('div', 'card');
-  c.append(el('b', '', w.ko), el('div', 'muted', `${w.en} · ${w.by} · ${w.year}`),
-           el('div', 'muted', w.where));
+  c.append(el('b', '', w.ko), el('div', 'muted', `${w.en} · ${w.by} · ${w.year}`));
+  /* 소장처를 모르는 작품이 있다. 빈 줄을 내지 않는다 (2026-09-23) */
+  if (w.where) c.append(el('div', 'muted', w.where));
   m.append(c);
 
   /* 안내하는 분의 말 — 어려운 말은 상대가 알려 주고 듣는 사람은 느낌으로 받는다.
      따라 말하라고 하지 않는다. 그래서 🎤 를 달지 않는다. */
-  await artWords();
   const gd = AW.guide.find(x => x.id === w.id);
   if (gd) {
     const g = el('div', 'guide');
@@ -1908,6 +2059,14 @@ async function viewArtOne(id) {
     g.append(row);
     m.append(g);
   }
+
+  /* 보이는 것 → 색 → 느낌 → 나의 이야기 차례로 말해 본다 */
+  m.append(el('h3', 'grp', '내 느낌 말하기'));
+  addLegend(m, SPEAK, true);
+  const key = el('div', 'saykey');
+  [['subj', '주어'], ['verb', '동사'], ['obj', '목적어'], ['time', '시간']]
+    .forEach(([k, n]) => key.append(el('span', 'c ' + k, n)));
+  m.append(key);
 
   ART.groups.forEach(g => {
     const ss = w.s.filter(s => s.g === g);
@@ -1928,9 +2087,198 @@ async function viewArtOne(id) {
   });
 
   /* 보기글을 따라 말한 뒤, 끝으로 자기 말로 해 본다 */
-  await artWords();
   const f = freeTalk();
   if (f) m.append(f);
+
+  /* ── 3. 이 그림 이야기 ─────────────────────────────── */
+  if (이야기) m.append(그림이야기칸(이야기));
+}
+
+/* ── 이 그림 이야기 ─────────────────────────────────────────
+   작품에는 사연이 있다. 사연을 알고 나면 할 말이 는다 — 그것이 이 칸의 목적이다.
+   다섯 걸음으로 통일했다 (2026-09-23 기획자 확정).
+       1 무슨 일이 있었을까요   2 누가 등장하나요   3 왜 유명해졌을까요
+       4 작품을 다시 바라봐요   5 영어로 한 문장 말해요
+   한국어 옆의 「영어로」를 누르면 같은 내용을 쉬운 영어로 보고 들을 수 있다.
+   번역이 아니라 같은 이야기를 영어로 다시 쓴 글이다. */
+function 그림이야기칸(t) {
+  const 통 = el('div', 'story');
+  통.append(el('h2', 'corner', '이 그림 이야기'));
+
+  const 영어켜짐 = () => { try { return localStorage.getItem('storyen') === '1'; } catch (e) { return false; } };
+  const 문단 = (글, cls) => {
+    const d = el('div', cls);
+    String(글).split('\n').forEach(줄 => d.append(el('p', '', 줄)));
+    return d;
+  };
+  const 걸음 = (번호, 이름, 칸) => {
+    const c = el('div', 'card step');
+    c.append(el('div', 'stepno', `${번호}. ${이름}`));
+    c.append(문단(칸.ko, 'stko'));
+    const 영 = 문단(칸.en, 'sten');
+    const 줄 = el('div', 'btns');
+    const 단추 = el('button', 'btn ghost small');
+    const 그리기 = 편 => { 영.hidden = !편; 단추.textContent = 편 ? '영어 감추기' : '영어로 읽어 보기'; };
+    단추.onclick = () => {
+      const 편 = 영.hidden;
+      try { localStorage.setItem('storyen', 편 ? '1' : '0'); } catch (e) {}
+      그리기(편);
+    };
+    줄.append(단추);
+    const b = speakBtn(칸.en.replace(/\n/g, ' ')); if (b) 줄.append(b);
+    c.append(줄, 영);
+    그리기(영어켜짐());
+    통.append(c);
+    return c;
+  };
+  걸음(1, '무슨 일이 있었을까요', t.what);
+  걸음(2, '누가 등장하나요', t.who);
+  걸음(3, '왜 유명해졌을까요', t.why);
+
+  /* 4. 다시 바라보는 물음 — 맞히는 자리가 아니다. 답을 적어 두지 않았다. */
+  const q = el('div', 'card step');
+  q.append(el('div', 'stepno', '4. 작품을 다시 바라봐요'));
+  q.append(el('div', 'muted', '정답이 없는 물음입니다. 그림을 한 번 더 보시라고 드리는 것입니다.'));
+  t.ask.forEach(x => {
+    const one = el('div', 'askone');
+    one.append(el('div', 'ko', x.ko), el('div', 'en', x.en));
+    const row = el('div', 'btns');
+    const b = speakBtn(x.en); if (b) row.append(b);
+    row.append(speakPractice(x.en));
+    one.append(row);
+    q.append(one);
+  });
+  통.append(q);
+
+  /* 5. 영어로 한 문장 — 쉬운 것에서 내 생각까지 세 걸음 */
+  const sy = el('div', 'card step');
+  sy.append(el('div', 'stepno', '5. 영어로 한 문장 말해요'));
+  t.say.forEach(x => {
+    const one = el('div', 'sayone');
+    one.append(el('span', 'lv', x.lv));
+    one.append(el('div', 'en', x.en), el('div', 'ko', x.ko));
+    const row = el('div', 'btns');
+    const b = speakBtn(x.en); if (b) row.append(b);
+    row.append(speakPractice(x.en));
+    one.append(row);
+    sy.append(one);
+  });
+  통.append(sy);
+  return 통;
+}
+
+/* ── 미술을 영어로 설명하기 ──────────────────────────────────
+   아는 미술을 쉬운 영어로 꺼내는 자리다. 미술사를 새로 배우는 곳이 아니다.
+   한 주제를 네 걸음으로 통일했다 (2026-09-23 기획자 확정).
+       1 한글로 이해하기  2 그림으로 확인하기  3 영어 핵심 문장 세 개
+       4 내가 직접 설명하기 — 한 문장 / 세 문장 / 30초
+   2번에서 누르면 이 앱이 가진 작품 100점 가운데 그 사조·기법이 실제로 보이는
+   그림으로 곧장 간다. 읽고 끝나지 않고 눈으로 확인하게 하려는 것이다. */
+let AE = null;
+const 미술영어 = async () => (AE = AE || await get('data/artenglish.json'));
+
+async function viewAe() {
+  const d = await 미술영어();
+  const m = screen(d.title, '#/art');
+  const h = el('div', 'hero');
+  h.append(el('h2', '', d.title), el('p', '', d.note));
+  m.append(h);
+  m.append(el('p', 'muted', d.about));
+  d.groups.forEach(g => {
+    m.append(el('h3', 'grp', g.name));
+    m.append(el('p', 'muted grpnote', g.note));
+    g.topics.forEach(t => {
+      const b = item(() => { location.hash = `#/ae/${t.id}`; });
+      b.append(el('div', 'aeen', t.en), tx(t.ko, t.when || `그림 ${t.see.length}점으로 확인`),
+               el('div', 'chev', '›'));
+      m.append(b);
+    });
+  });
+}
+
+async function viewAeOne(id) {
+  const d = await 미술영어();
+  let t = null, 묶 = null;
+  d.groups.forEach(g => g.topics.forEach(x => { if (x.id === id) { t = x; 묶 = g; } }));
+  if (!t) return location.replace('#/ae');
+  const m = screen(t.ko, '#/ae');
+  const top = el('div', 'aetop');
+  top.append(el('div', 'w', t.en), el('div', 'ko', t.ko));
+  if (t.when) top.append(el('div', 'muted', t.when));
+  m.append(top);
+  addLegend(m, SPEAK, true);
+
+  /* 1 */
+  const c1 = el('div', 'card step');
+  c1.append(el('div', 'stepno', '1. 한글로 이해하기'));
+  String(t.understand).split('\n').forEach(줄 => c1.append(el('p', '', 줄)));
+  if (t.note) c1.append(el('div', 'aenote', t.note));
+  m.append(c1);
+
+  /* 2 — 이 앱이 가진 그림으로 곧장 간다 */
+  const c2 = el('div', 'card step');
+  c2.append(el('div', 'stepno', '2. 그림으로 확인하기'));
+  t.see.forEach(x => {
+    const b = el('button', 'aesee');
+    const tx2 = el('div', 'tx');
+    tx2.append(el('b', '', `「${x.name}」`), el('small', '', x.why));
+    b.append(tx2, el('div', 'chev', '›'));
+    b.onclick = () => { location.hash = `#/a/${x.at}`; };
+    c2.append(b);
+  });
+  m.append(c2);
+
+  /* 3 */
+  const c3 = el('div', 'card step');
+  c3.append(el('div', 'stepno', '3. 영어 핵심 문장 세 개'));
+  t.say.forEach(x => {
+    const one = el('div', 'sayone');
+    one.append(el('div', 'en', x.en), el('div', 'ko', x.ko));
+    const row = el('div', 'btns');
+    const b = speakBtn(x.en); if (b) row.append(b);
+    row.append(speakPractice(x.en));
+    one.append(row);
+    c3.append(one);
+  });
+  m.append(c3);
+
+  /* 4 — 한 걸음씩 길어진다 */
+  const c4 = el('div', 'card step');
+  c4.append(el('div', 'stepno', '4. 내가 직접 설명하기'));
+  c4.append(el('div', 'muted', '쉬운 것부터 하십시오. 셋 다 하지 않으셔도 됩니다.'));
+
+  const lv1 = el('div', 'sayone');
+  lv1.append(el('span', 'lv', '한 문장'));
+  lv1.append(el('div', 'en', t.do.one.en), el('div', 'ko', t.do.one.ko));
+  const r1 = el('div', 'btns');
+  const b1 = speakBtn(t.do.one.en); if (b1) r1.append(b1);
+  r1.append(speakPractice(t.do.one.en));
+  lv1.append(r1); c4.append(lv1);
+
+  const 셋 = t.say.map(x => x.en).join(' ');
+  const lv2 = el('div', 'sayone');
+  lv2.append(el('span', 'lv', '세 문장'));
+  lv2.append(el('div', 'ko', '위의 세 문장을 이어서 말해 보세요. 보고 읽으셔도 됩니다.'));
+  const r2 = el('div', 'btns');
+  const b2 = speakBtn(셋); if (b2) r2.append(b2);
+  r2.append(speakPractice(셋, true));
+  lv2.append(r2); c4.append(lv2);
+
+  const lv3 = el('div', 'sayone');
+  lv3.append(el('span', 'lv', '30초 설명'));
+  lv3.append(el('div', 'ko', t.do.talk.ko));
+  const 도움 = el('div', 'aehint');
+  도움.append(el('div', 'lab', '이렇게 시작하셔도 됩니다'));
+  t.do.talk.hint.forEach(x => {
+    const one = el('div', 'hintone');
+    one.append(el('div', 'en', x));
+    const b = speakBtn(x); if (b) one.append(b);
+    도움.append(one);
+  });
+  lv3.append(도움);
+  lv3.append(speakPractice(t.do.talk.hint.join(' '), true));
+  c4.append(lv3);
+  m.append(c4);
 }
 
 /* ── 내 기록 ────────────────────────────────────────────── */
@@ -1998,6 +2346,109 @@ function viewMe() {
   m.append(r);
 }
 
+/* ── 함께 읽기: 손주와 읽는 1,800단어 ───────────────────────
+   직원의 자녀가 중학생이라 「중·고등 단어 읽기도 되느냐」고 물어 왔다.
+   교육부가 정한 1,800개를 50개씩 묶어 이어 읽기로 넣는다. 손주가 배우는 말을
+   할머니가 같은 소리로 들어 보시라는 뜻이다. (2026-09-22)
+   앞의 두 묶음 183개는 앱에 없던 낱말 가운데 시니어에게 쓸모 있는 것만 골랐다. */
+let HS = null;
+const hsData = async () => (HS = HS || await get('data/hs.json'));
+
+async function viewHs() {
+  const d = await hsData();
+  const m = screen(d.lead || d.title, '#/learn');   /* 화면 이름은 대표 콘텐츠명 */
+  const h = el('div', 'hero');
+  h.append(el('h2', '', d.title));                  /* 상위 코너명 */
+  h.append(el('p', '', d.note));
+  m.append(h);
+  /* 자세한 말씀은 머리글 밖에 둔다 — 머리글이 길면 시니어에게 읽히지 않는다 */
+  if (d.about) m.append(el('p', 'muted', d.about));
+  m.append(el('p', 'muted', `1,800개 가운데 ${d.counts.inapp}개는 이 앱 장면에 이미 들어 있습니다. `
+    + '그런 낱말에는 「앱에 있어요」가 붙고, 누르면 그 그림으로 갑니다.'));
+  m.append(el('h3', 'grp', '먼저 볼 낱말 183개'));
+  m.append(el('p', 'muted grpnote', '1,800개 가운데 앱에 없던 말만 골랐습니다. 여기에는 따라 말하기도 붙습니다.'));
+  d.groups.filter(g => g.kind === 'pick').forEach(g => m.append(hs묶음단추(g, '★')));
+  m.append(el('h3', 'grp', '1,800개 전부 — 50개씩'));
+  m.append(el('p', 'muted grpnote', '한 묶음이 5분쯤입니다. 이어 읽기를 눌러 두고 들으셔도 됩니다.'));
+  d.groups.filter(g => g.kind === 'all').forEach(g => m.append(hs묶음단추(g, g.id.slice(1))));
+}
+function hs묶음단추(g, 번호) {
+  const b = item(() => { location.hash = `#/hs/${g.id}`; });
+  b.append(el('div', 'num', 번호), tx(g.name, `낱말 ${g.words.length}개`), el('div', 'chev', '›'));
+  return b;
+}
+
+async function viewHsGroup(id) {
+  const d = await hsData();
+  const g = d.groups.find(x => x.id === id);
+  if (!g) return location.replace('#/hs');
+  const 고른묶음 = g.kind === 'pick';
+  const m = screen(g.name, '#/hs');
+  if (g.note) m.append(el('p', 'muted', g.note));
+  addLegend(m, SPEAK, 고른묶음);
+
+  /* 뜻도 함께 들을지 — 기계에 한국말 목소리가 있을 때만 쓸모가 있다 */
+  const opt = el('label', 'hsopt');
+  const cb = el('input'); cb.type = 'checkbox';
+  try { cb.checked = localStorage.getItem('hsko') === '1'; } catch (e) {}
+  cb.onchange = () => { try { localStorage.setItem('hsko', cb.checked ? '1' : '0'); } catch (e) {} };
+  opt.append(cb, el('span', '', '뜻도 한국말로 함께 듣기'));
+  m.append(opt);
+
+  const 줄들 = [];
+  const 이어 = el('button', 'btn 이어');
+  const 시작글 = '▶ 이 묶음 이어 읽기', 멈춤글 = '■ 그만 듣기';
+  이어.textContent = 시작글;
+  let 도는중 = false;
+  const 멈추기 = () => {
+    도는중 = false; 이어.textContent = 시작글; 이어.classList.remove('on');
+    if (SPEAK) speechSynthesis.cancel();
+    if (player) { player.pause(); player = null; }
+    줄들.forEach(x => x.card.classList.remove('now'));
+  };
+  잇기멈춤.push(멈추기);
+  const 한낱말씩 = i => {
+    if (!도는중) return;
+    if (i >= 줄들.length) return 멈추기();
+    줄들.forEach(x => x.card.classList.remove('now'));
+    const x = 줄들[i];
+    x.card.classList.add('now');
+    x.card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const 다음 = () => setTimeout(() => 한낱말씩(i + 1), 420);
+    한줄읽기(null, null, x.w, 'me', null,
+             () => cb.checked ? setTimeout(() => 한국말읽기(x.ko, 다음), 250) : 다음());
+  };
+  이어.onclick = () => {
+    if (도는중) return 멈추기();
+    잇기멈춤.forEach(f => f());
+    도는중 = true; 이어.textContent = 멈춤글; 이어.classList.add('on');
+    한낱말씩(0);
+  };
+  m.append(이어);
+
+  g.words.forEach(w => {
+    const c = el('div', 'card awone hsone');
+    const info = el('div');
+    const hw = el('div', 'w');
+    hw.append(el('span', 'hsn', String(w.n)), document.createTextNode(w.w));
+    if (w.at) {
+      const t = el('button', 'tag go', '앱에 있어요 ›');
+      t.onclick = e => { e.stopPropagation(); location.hash = `#/w/${w.at}`; };
+      hw.append(t);
+    }
+    info.append(hw);
+    const pr = pronLine(w, true); if (pr) info.append(pr);
+    info.append(el('div', 'ko', w.ko));
+    c.append(info);
+    const row = el('div', 'btns');
+    const b = speakBtn(w.w); if (b) row.append(b);
+    if (고른묶음) row.append(speakPractice(w.w));
+    c.append(row);
+    m.append(c);
+    줄들.push({ card: c, w: w.w, ko: w.ko });
+  });
+}
+
 /* ── 길 찾기 ────────────────────────────────────────────── */
 const TABS = { learn: '#/learn', talk: '#/talk', art: '#/art', say: '#/say', me: '#/me' };
 document.querySelectorAll('.tab').forEach(b => {
@@ -2022,6 +2473,8 @@ async function route() {
     else if (k === 'art') { markTab('art'); await viewArt(); }
     else if (k === 'a') { markTab('art'); await viewArtOne(p[1]); }
     else if (k === 'aw') { markTab('art'); await viewArtWords(); }
+    else if (k === 'ae') { markTab('art'); p[1] ? await viewAeOne(p[1]) : await viewAe(); }
+    else if (k === 'hs') { markTab('learn'); p[1] ? await viewHsGroup(p[1]) : await viewHs(); }
     else if (k === 'say') { markTab('say'); await viewSay(); }
     else if (k === 'me') { markTab('me'); viewMe(); }
     else location.replace('#/learn');

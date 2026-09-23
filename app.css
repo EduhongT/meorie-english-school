@@ -1,4 +1,4 @@
-/* 머리에 그리는 영어 연습실 — 시니어 화면 원칙: 큰 글씨, 큰 단추, 넉넉한 사이 */
+/* 머리에 그리는 영어연습실 — 시니어 화면 원칙: 큰 글씨, 큰 단추, 넉넉한 사이 */
 :root{
   --bg:#EFE6D3; --paper:#FFF6E6; --card:#FFFFFF;
   --navy:#1F3864; --navy-2:#2A4A7F;
@@ -19,6 +19,8 @@ body{
   background:var(--bg); color:var(--ink);
   font-family:'Noto Sans KR','Apple SD Gothic Neo',system-ui,sans-serif;
   font-size:calc(17px * var(--f)); line-height:1.6;
+  word-break:keep-all;                  /* 한국어를 낱말 가운데서 끊지 않는다 */
+  overflow-wrap:break-word;
 }
 .shell{display:flex; flex-direction:column; min-height:100vh; min-height:100dvh}
 
@@ -69,7 +71,8 @@ main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;disp
 .muted{color:var(--muted);font-size:calc(15px * var(--f))}
 .sechead{margin:8px 2px 0;font-size:calc(19px * var(--f));color:var(--navy)}
 
-.btn{
+.btn{word-break:keep-all;
+  
   display:flex;align-items:center;justify-content:center;gap:9px;
   min-height:56px;padding:14px 18px;border-radius:16px;
   background:var(--accent);color:#fff;font-weight:700;font-size:calc(18px * var(--f));
@@ -110,21 +113,29 @@ main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;disp
 }
 .spot:active{border-color:var(--accent);background:rgba(200,98,62,.14)}
 .spot .n{
-  min-width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:13px;
-  background:var(--navy);color:#fff;font-weight:700;font-size:13px;line-height:26px;
-  text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.3);
+  font-size:clamp(9px, 2.8vw, 13px);     /* 그림이 좁아지면 번호도 함께 작아진다 */
+  min-width:1.9em;height:1.9em;line-height:1.9em;margin:-1.35em 0 0 -1.35em;border-radius:999px;
+  background:var(--navy);color:#fff;font-weight:700;
+  text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.35);
+  border:2px solid #fff;                 /* 그림과 겹쳐도 번호가 또렷하게 */
+  box-sizing:content-box;
 }
 .spot.seen{border-color:var(--gold)}
 .spot.seen .n{background:var(--gold);color:#3a2d10}
 
 /* ── 단어 카드 ───────────────────────────────── */
-.wordtop{display:flex;gap:16px;align-items:center}
+.wordtop{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.wordtop > div:last-child{flex:1 1 auto;min-width:0}
 .wordtop .pic{
-  width:128px;height:128px;flex:none;border-radius:18px;background:var(--paper);
+  width:min(128px, 30vw);height:min(128px, 30vw);flex:none;border-radius:18px;background:var(--paper);
   border:2px solid var(--line);display:flex;align-items:center;justify-content:center;padding:6px;
 }
 .wordtop .pic img{max-height:100%;width:auto}
-.wordtop .w{font-family:'Gowun Batang',serif;font-size:calc(34px * var(--f));font-weight:700;line-height:1.2;word-break:break-word}
+/* 글씨를 키우거나 기계의 글씨 설정이 큰 곳에서도 낱말이 쪼개지지 않게
+   칸 너비에 맞춰 크기를 줄인다 (2026-09-23) */
+.wordtop .w{font-family:'Gowun Batang',serif;font-weight:700;line-height:1.25;
+  font-size:min(calc(34px * var(--f)), 13vw);
+  word-break:keep-all;overflow-wrap:break-word;hyphens:none}
 .pron{display:flex;flex-wrap:wrap;gap:7px;align-items:baseline;margin-top:3px}
 .pron .ipa{font-size:calc(13.5px * var(--f));color:var(--muted);
   font-family:'Gowun Batang',serif;letter-spacing:.01em}
@@ -518,3 +529,13 @@ main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:18px 16px 26px;disp
 .aehint .lab{font-size:calc(13.5px * var(--f));font-weight:700;color:var(--accent-d);margin-bottom:6px}
 .hintone{display:flex;align-items:center;gap:8px;margin-top:6px}
 .hintone .en{flex:1;font-family:'Gowun Batang',serif;font-size:calc(17px * var(--f));color:var(--navy)}
+
+/* ── 카톡 창에서 바깥 브라우저로 옮겨 가는 줄 (2026-09-23) ───
+   카톡 안의 작은 창에는 영어 목소리가 없다. 주소 끝에
+   ?openExternalBrowser=1 을 붙이면 카카오가 바깥 브라우저로 열어 준다. */
+.kakao{background:var(--accent);color:#fff;padding:14px 16px;
+       display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.kakao b{font-size:calc(16px * var(--f));line-height:1.45}
+.kakao .go{background:#fff;color:var(--accent-d);border:0;border-radius:12px;
+           padding:10px 16px;font-weight:700;font-size:calc(16px * var(--f));cursor:pointer;
+           word-break:keep-all}

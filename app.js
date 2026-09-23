@@ -1,4 +1,4 @@
-/* 머리에 그리는 영어 연습실 — 화면 전환·자료 읽기·음성
+/* 머리에 그리는 영어연습실 — 화면 전환·자료 읽기·음성
    자료는 장면을 열 때 그 장면 것만 받아 온다. 한꺼번에 받지 않는다. */
 'use strict';
 
@@ -104,14 +104,35 @@ function 한국말읽기(text, 끝나면) {
    (미리 알리지 않는다 — 소리가 나는 창에서도 알리면 잔소리가 된다) */
 const 앱안창 = /KAKAOTALK|NAVER|Line\/|FBAN|FBAV|Instagram|DaumApps|everytimeApp|KAKAOSTORY/i
               .test(navigator.userAgent);
+/* 카톡 안에서 열면 그 앱의 작은 창이 뜨고, 거기에는 영어 목소리가 없다.
+   카카오는 주소 끝에 ?openExternalBrowser=1 이 붙어 있으면 바깥 브라우저로 열어 준다.
+   그래서 카톡 창이면 맨 위에 단추 한 줄을 내고, 누르면 바깥 브라우저로 옮겨 준다.
+   한 번 옮겨 간 뒤에는 나오지 않는다. (2026-09-23) */
+function 바깥으로열기단추() {
+  if (!앱안창) return;
+  if (location.search.includes('openExternalBrowser')) return;
+  const d = el('div', 'kakao');
+  d.append(el('b', '', '지금 창에서는 소리가 나지 않습니다.'));
+  const b = el('button', 'go', '소리 나는 곳에서 열기');
+  b.onclick = () => {
+    const 주소 = location.origin + location.pathname
+              + (location.search ? location.search + '&' : '?') + 'openExternalBrowser=1'
+              + location.hash;
+    location.href = 주소;
+  };
+  d.append(b);
+  const shell = document.querySelector('.shell');
+  shell.insertBefore(d, shell.children[1]);
+}
+
 let 소리알림함 = false;
 function 소리못냄알림() {
   if (소리알림함) return;
   소리알림함 = true;
   const d = el('div', 'nosound');
   d.innerHTML = '<b>이 창에서는 소리가 나지 않습니다.</b><br>' +
-    (앱안창 ? '오른쪽 아래 <b>⋮</b> (또는 나침반 모양)을 누르고 ' +
-              '<b>「다른 브라우저로 열기」</b>를 골라 주세요. 그러면 소리가 납니다.'
+    (앱안창 ? '맨 위의 <b>「소리 나는 곳에서 열기」</b> 단추를 눌러 주세요. ' +
+              '그래도 안 되면 오른쪽 아래 <b>⋮</b> 를 누르고 <b>「다른 브라우저로 열기」</b>를 고르시면 됩니다.'
             : '이 기계에 영어 목소리가 없는 것 같습니다. ' +
               '다른 브라우저로 열어 보시거나, 글자를 보고 따라 말하셔도 됩니다.');
   const b = el('button', 'go', '알겠습니다');
@@ -2487,6 +2508,7 @@ async function route() {
 window.addEventListener('hashchange', route);
 
 (async function start() {
+  바깥으로열기단추();
   INDEX = await get('data/index.json');
   try { AUDIO = await get('data/audio.json'); } catch (e) { AUDIO = null; }
   route();

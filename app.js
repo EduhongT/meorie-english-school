@@ -180,6 +180,68 @@ window.addEventListener('hashchange', () => {
   잇기멈춤.forEach(f => f()); 잇기멈춤 = [];
 });
 
+/* ── 이어 읽기 틀 ───────────────────────────────────────────
+   낱말이나 문장을 줄줄이 읽어 주는 단추. 「함께 읽기」에서만 쓰던 것을
+   장면(10개)·구역(100개)에서도 쓰려고 하나로 모았다. (2026-09-27 기획자 요청)
+
+   줄 하나는 { w: 영어, ko: 뜻, card: 짚어 줄 칸 } 꼴이다.
+   줄들은 나중에 채워도 된다 — 단추가 배열을 그대로 들고 있다가 누를 때 읽는다. */
+function 이어읽기단추(줄들, 옵션) {
+  옵션 = 옵션 || {};
+  const 이어 = el('button', 'btn 이어');
+  const 시작글 = 옵션.시작글 || '▶ 이어 읽기';
+  const 멈춤글 = 옵션.멈춤글 || '■ 그만 듣기';
+  이어.textContent = 시작글;
+  let 도는중 = false;
+  const 짚을것 = x => [x.card, x.spot].filter(Boolean);
+  const 짚기지우기 = () => 줄들.forEach(x => 짚을것(x).forEach(e => e.classList.remove('now')));
+  const 멈추기 = () => {
+    도는중 = false; 이어.textContent = 시작글; 이어.classList.remove('on');
+    if (SPEAK) speechSynthesis.cancel();
+    if (player) { player.pause(); player = null; }
+    짚기지우기();
+    if (옵션.끝나면) 옵션.끝나면();
+  };
+  잇기멈춤.push(멈추기);
+  const 한줄씩 = i => {
+    if (!도는중) return;
+    if (i >= 줄들.length) return 멈추기();
+    /* 소리가 안 나는 창에서는 줄줄이 헛돌지 않게 여기서 멈춘다 */
+    if (소리알림함) return 멈추기();
+    짚기지우기();
+    const x = 줄들[i];
+    짚을것(x).forEach(e => e.classList.add('now'));
+    if (x.card) x.card.scrollIntoView({ block: 옵션.바싹 ? 'nearest' : 'center', behavior: 'smooth' });
+    if (옵션.알림) 옵션.알림(i, x);
+    const 다음 = () => setTimeout(() => 한줄씩(i + 1), 옵션.사이 || 420);
+    const 뜻도 = 옵션.뜻함께 && 옵션.뜻함께() && x.ko;
+    한줄읽기(x.key || null, x.src || null, x.w, x.who || 'me', null,
+             () => 뜻도 ? setTimeout(() => 한국말읽기(x.ko, 다음), 250) : 다음());
+  };
+  이어.onclick = async () => {
+    if (도는중) return 멈추기();
+    잇기멈춤.forEach(f => f());
+    if (옵션.준비) {                       /* 구역처럼 낱말을 그때 불러와야 하는 곳 */
+      이어.disabled = true;
+      try { await 옵션.준비(); } finally { 이어.disabled = false; }
+    }
+    if (!줄들.length) return;
+    도는중 = true; 이어.textContent = 멈춤글; 이어.classList.add('on');
+    한줄씩(0);
+  };
+  return 이어;
+}
+
+/* 뜻도 한국말로 함께 들을지 — 고른 값은 코너를 옮겨도 그대로 따라간다 */
+function 뜻함께칸() {
+  const opt = el('label', 'hsopt');
+  const cb = el('input'); cb.type = 'checkbox';
+  try { cb.checked = localStorage.getItem('hsko') === '1'; } catch (e) {}
+  cb.onchange = () => { try { localStorage.setItem('hsko', cb.checked ? '1' : '0'); } catch (e) {} };
+  opt.append(cb, el('span', '', '뜻도 한국말로 함께 듣기'));
+  return { el: opt, 켜짐: () => cb.checked };
+}
+
 /* ── 발음 줄 ────────────────────────────────────────────────
    발음기호와 한글 발음을 나란히 내고, 힘주어 읽는 자리를 색으로 짚는다.
    두 곳이 같은 소리를 가리킨다 — 발음기호의 ir, 한글의 hs. */
@@ -412,12 +474,42 @@ function viewZone(i) {
   const z = INDEX.zones[+i];
   if (!z) return location.replace('#/learn');
   const m = screen(z.name, '#/learn');
-  z.scenes.forEach((s, k) => {
+  const 모두 = z.scenes.reduce((a, s) => a + s.n, 0);
+
+  /* 구역 전체 이어 듣기 — 장면 열 개를 차례로 읽는다. (2026-09-27 기획자 요청)
+     낱말은 단추를 누를 때 불러온다. 구역 화면을 열 때마다 열 개를
+     미리 받아 오면 느려지기 때문이다. */
+  const 뜻 = 뜻함께칸();
+  m.append(뜻.el);
+  const 상태 = el('p', 'muted 듣는중');
+  const 칸 = {};
+  const 줄들 = [];
+  let 채움 = false;
+  const 이어 = 이어읽기단추(줄들, {
+    시작글: `▶ 이 구역 ${모두}개 이어 듣기`,
+    뜻함께: 뜻.켜짐,
+    준비: async () => {
+      if (채움) return;
+      상태.textContent = '낱말을 불러오는 중입니다…';
+      for (const sc of z.scenes) {
+        const d = await get(`data/scene/${sc.id}.json`);
+        d.words.forEach(w => 줄들.push({ card: 칸[sc.id], w: w.w, ko: w.ko, 장면: sc.name }));
+      }
+      채움 = true;
+      상태.textContent = '';
+    },
+    알림: (k, x) => { 상태.textContent = `${k + 1} / ${줄들.length} · ${x.장면} · ${x.w}`; },
+    끝나면: () => { 상태.textContent = ''; },
+  });
+  m.append(이어, 상태);
+
+  z.scenes.forEach(s => {
     const b = item(() => { location.hash = `#/s/${s.id}`; });
     const img = el('img', 'thumb'); img.src = `img/scene/${s.id}.jpg`; img.alt = ''; img.loading = 'lazy';
     b.append(img, tx(s.name, `단어 ${s.n}개`));
     b.append(mem.seen[s.id] ? el('div', 'done', '✓ 봄') : el('div', 'chev', '›'));
     m.append(b);
+    칸[s.id] = b;
   });
 }
 
@@ -432,9 +524,11 @@ async function viewScene(id) {
   const wrap = el('div', 'scenewrap');
   const img = el('img'); img.src = `img/scene/${id}_민.jpg`; img.alt = d.name;
   wrap.append(img);
+  const 동그라미 = {};                 /* 이어 듣기가 그림 위에서도 자리를 짚도록 (2026-09-27) */
   d.words.forEach(w => {
     if (w.x == null) return;
     const s = el('button', 'spot' + (mem.seen[w.id] ? ' seen' : ''));
+    동그라미[w.slot] = s;
     s.append(el('span', 'n', String(w.slot)));
     s.style.left = (w.x / 1536 * 100) + '%';           /* 장면 원본 1536×1024 */
     s.style.top = (w.y / 1024 * 100) + '%';
@@ -454,12 +548,24 @@ async function viewScene(id) {
   r.append(q, t); m.append(r);
 
   m.append(el('h3', 'sechead', '이 장면의 단어'));
+
+  /* 10개 이어 듣기 — 눈으로 그림을 따라가며 소리만 들으실 수 있게 (2026-09-27) */
+  const 뜻 = 뜻함께칸();
+  m.append(뜻.el);
+  const 줄들 = [];
+  m.append(이어읽기단추(줄들, {
+    시작글: `▶ 이 장면 ${d.words.length}개 이어 듣기`,
+    뜻함께: 뜻.켜짐,
+    바싹: true,                        /* 그림이 눈에서 사라지지 않게 조금만 움직인다 */
+  }));
+
   d.words.forEach(w => {
     const b = item(() => { location.hash = `#/w/${id}/${w.slot}`; });
     b.append(el('div', 'num', String(w.slot)),
              tx(w.w, `${w.han && w.han !== w.ko ? w.han + ' · ' : ''}${w.ko} · ${w.pos}`));
     b.append(mem.seen[w.id] ? el('div', 'done', '✓') : el('div', 'chev', '›'));
     m.append(b);
+    줄들.push({ card: b, spot: 동그라미[w.slot], w: w.w, ko: w.ko });
   });
 }
 
@@ -2409,43 +2515,11 @@ async function viewHsGroup(id) {
   addLegend(m, SPEAK, 고른묶음);
 
   /* 뜻도 함께 들을지 — 기계에 한국말 목소리가 있을 때만 쓸모가 있다 */
-  const opt = el('label', 'hsopt');
-  const cb = el('input'); cb.type = 'checkbox';
-  try { cb.checked = localStorage.getItem('hsko') === '1'; } catch (e) {}
-  cb.onchange = () => { try { localStorage.setItem('hsko', cb.checked ? '1' : '0'); } catch (e) {} };
-  opt.append(cb, el('span', '', '뜻도 한국말로 함께 듣기'));
-  m.append(opt);
+  const 뜻 = 뜻함께칸();
+  m.append(뜻.el);
 
   const 줄들 = [];
-  const 이어 = el('button', 'btn 이어');
-  const 시작글 = '▶ 이 묶음 이어 읽기', 멈춤글 = '■ 그만 듣기';
-  이어.textContent = 시작글;
-  let 도는중 = false;
-  const 멈추기 = () => {
-    도는중 = false; 이어.textContent = 시작글; 이어.classList.remove('on');
-    if (SPEAK) speechSynthesis.cancel();
-    if (player) { player.pause(); player = null; }
-    줄들.forEach(x => x.card.classList.remove('now'));
-  };
-  잇기멈춤.push(멈추기);
-  const 한낱말씩 = i => {
-    if (!도는중) return;
-    if (i >= 줄들.length) return 멈추기();
-    줄들.forEach(x => x.card.classList.remove('now'));
-    const x = 줄들[i];
-    x.card.classList.add('now');
-    x.card.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    const 다음 = () => setTimeout(() => 한낱말씩(i + 1), 420);
-    한줄읽기(null, null, x.w, 'me', null,
-             () => cb.checked ? setTimeout(() => 한국말읽기(x.ko, 다음), 250) : 다음());
-  };
-  이어.onclick = () => {
-    if (도는중) return 멈추기();
-    잇기멈춤.forEach(f => f());
-    도는중 = true; 이어.textContent = 멈춤글; 이어.classList.add('on');
-    한낱말씩(0);
-  };
-  m.append(이어);
+  m.append(이어읽기단추(줄들, { 시작글: '▶ 이 묶음 이어 읽기', 뜻함께: 뜻.켜짐 }));
 
   g.words.forEach(w => {
     const c = el('div', 'card awone hsone');
